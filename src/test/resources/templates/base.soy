@@ -1,0 +1,24 @@
+{namespace templates.base}
+
+
+/**
+ *
+ */
+{deltemplate FooTemplate}
+Base Template
+{/deltemplate}
+
+/**
+ *
+ */
+{deltemplate FooTemplate variant="'Variant_1'"}
+Base Template - Variant 1
+{/deltemplate}
+
+
+/**
+ *
+ */
+{template .Foo}
+  {delcall FooTemplate/}
+{/template}
