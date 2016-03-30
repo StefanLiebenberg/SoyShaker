@@ -6,25 +6,24 @@ import com.google.template.soy.soytree.TemplateDelegateNode;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
-public class DelegateShaker implements NodeVisitor<SoyFileSetNode, Object> {
+public class DelegateShaker implements NodeVisitor<SoyFileSetNode, SoyFileSetNode> {
 
     private final List<String> prioritisedPackages;
-    
+
     public DelegateShaker(final List<String> prioritisedPackages) {
         this.prioritisedPackages = prioritisedPackages;
     }
 
     @Override
-    public Object exec(final SoyFileSetNode node) {
-        final FindDelegatePriorityMap priorityMapVisitor = new FindDelegatePriorityMap(prioritisedPackages);
-        final Map<TemplateDelegateNode.DelTemplateKey, Integer> priorityMap = priorityMapVisitor.exec(node);
-        final RemoveLowPriorityTemplatesFromFileSet removeVisitor = new RemoveLowPriorityTemplatesFromFileSet(prioritisedPackages, priorityMap);
-        return removeVisitor.exec(node);
+    public SoyFileSetNode exec(final SoyFileSetNode node) {
+        final Function<String, Integer> calculator = this::calculatePriority;
+        final Map<TemplateDelegateNode.DelTemplateKey, Integer> priorityMap = new FindDelegatePriorityMap(calculator).exec(node);
+        return new RemoveLowPriorityTemplatesFromFileSet(calculator, priorityMap).exec(node);
     }
 
-    static Integer calculatePriority(final List<String> prioritisedPackages,
-                                     final String packageName) {
+    private Integer calculatePriority(String packageName) {
 
         if (packageName == null) {
             return 0;

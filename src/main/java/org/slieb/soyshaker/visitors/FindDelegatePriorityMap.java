@@ -3,36 +3,31 @@ package org.slieb.soyshaker.visitors;
 import com.google.template.soy.basetree.ParentNode;
 import com.google.template.soy.soytree.*;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 
-import static org.slieb.soyshaker.visitors.DelegateShaker.calculatePriority;
+@SuppressWarnings("WeakerAccess")
+public class FindDelegatePriorityMap extends AbstractSoyNodeVisitor<Map<TemplateDelegateNode.DelTemplateKey, Integer>> {
 
-/**
- * Created by stefan on 3/29/16.
- */
-class FindDelegatePriorityMap extends AbstractSoyNodeVisitor<Map<TemplateDelegateNode.DelTemplateKey, Integer>> {
-
-    private final List<String> prioritisedPackages;
     private final Map<TemplateDelegateNode.DelTemplateKey, Integer> priorityMap;
 
-    FindDelegatePriorityMap(final List<String> prioritisedPackages) {
-        this.prioritisedPackages = prioritisedPackages;
+    private final Function<String, Integer> priorityCalculator;
+
+    public FindDelegatePriorityMap(final Function<String, Integer> priorityCalculator) {
+        this.priorityCalculator = priorityCalculator;
         this.priorityMap = new ConcurrentHashMap<>();
     }
 
     @Override
     protected void visitSoyFileNode(final SoyFileNode node) {
         final String delPackageName = node.getDelPackageName();
-        final Integer priority = calculatePriority(prioritisedPackages, delPackageName);
+        final Integer priority = priorityCalculator.apply(delPackageName);
         final Set<TemplateDelegateNode.DelTemplateKey> keys = new FindDelegateKeysInSoyFile().exec(node);
-        for (final TemplateDelegateNode.DelTemplateKey key : keys) {
-            if (!priorityMap.containsKey(key) || priorityMap.get(key) < priority) {
-                priorityMap.put(key, priority);
-            }
-        }
+        keys.stream()
+            .filter(key -> !priorityMap.containsKey(key) || priorityMap.get(key) < priority)
+            .forEach(key -> priorityMap.put(key, priority));
     }
 
     @Override
